@@ -261,7 +261,7 @@ void ser_routine() {
         break;
       }
       default: {
-        Serial.println("Unrecognized command!!");
+        Serial.println("Unrecognized command");
         while(Serial.read() > -1);
         break;
       }
