@@ -260,6 +260,99 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
+      case 69: {// Testing Function - Set Manual Throttle
+        Serial.println("Setting throttles manually.");
+        // Set LED8 = HI, LED9 = PWM, LED10 = LOW to make Motor1 CW spin at 40% throttle
+        // Set LED11= PWM, LED12=LOW, LED13 = HIGH to make motor2 CW spin at 40% throttle
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED8_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x10);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED9_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x66);
+        Wire.write(0x06);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED10_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+        
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED11_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x66);
+        Wire.write(0x06);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED12_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED13_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x10);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+
+        delay(1000);    
+
+        // Now set for short brake
+        // Set LED9 = LOW, LED10 = LOW to make Motor1 short brake
+        // Set LED11= LOW, LED12 = LOW to make Motor2 short brake
+    
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED9_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED10_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+    
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED11_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED12_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
+        
+        while(Serial.read() > -1);
+        break;
+      }
       default: {
         Serial.println("Unrecognized command?");
         while(Serial.read() > -1);
