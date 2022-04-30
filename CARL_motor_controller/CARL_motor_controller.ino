@@ -274,6 +274,9 @@ void ser_routine() {
         //in_byte4 = Serial.read(); // right motor throttle, high byte
         //in_byte5 = Serial.read(); // right motor throttle, low byte
 
+        byte throttle_off_h {0};
+        byte throttle_off_l {0};
+        
         int motor_throttle = ((in_byte2 << 8) | (in_byte3));
        
         if (motor_throttle < 0) {
