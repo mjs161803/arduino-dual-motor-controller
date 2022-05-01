@@ -1,0 +1,12 @@
+{
+    "board": "arduino:avr:uno",
+    "sketch": "CARL_motor_controller.ino",
+    "buildPreferences": [
+        [
+            "build.extra_flags",
+            "-D__AVR_ATmega328P__"
+        ]
+    ],
+    "port": "/dev/ttyACM0",
+    "programmer": "arduino:avrisp"
+}
