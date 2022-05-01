@@ -52,7 +52,7 @@ volatile float r_motor_throttle {0.0}; // commanded motor throttle, scaled from 
 
 void setup() {
   Wire.begin();        // join i2c bus (address optional for master)
-  Serial.begin(9600);  // start serial for output
+  Serial.begin(115200);  // start serial for output
   // PCA9685 Initialization sequence
     Wire.beginTransmission(PCA9685_addr); 
     Wire.endTransmission();
@@ -271,29 +271,33 @@ void ser_routine() {
         // Read serial port for new throttle values
         in_byte2 = Serial.read(); // left motor throttle, high byte
         in_byte3 = Serial.read(); // left motor throttle, low byte
-        //in_byte4 = Serial.read(); // right motor throttle, high byte
-        //in_byte5 = Serial.read(); // right motor throttle, low byte
+        in_byte4 = Serial.read(); // right motor throttle, high byte
+        in_byte5 = Serial.read(); // right motor throttle, low byte
 
         byte throttle_off_h {0};
         byte throttle_off_l {0};
+        unsigned int scaled_throttle {0};
         
         int motor_throttle = ((in_byte2 << 8) | (in_byte3));
-       
+                
         if (motor_throttle < 0) {
           l_motor_dir = 0;
         } else {
           l_motor_dir = 1;
         }
         float l_motor_throttle = (float(abs(motor_throttle)));
-       
-        //motor_throttle = ((in_byte4 << 8) | (in_byte5));
-        //
-        //if (motor_throttle < 0) {
-        //  r_motor_dir = 0;
-        //} else {
-        //  r_motor_dir = 1;
-        //}
-        //float r_motor_throttle = (float(abs(motor_throttle)));
+                
+        motor_throttle = ((in_byte4 << 8) | (in_byte5));
+        
+        if (motor_throttle < 0) {
+          r_motor_dir = 0;
+        } else {
+          r_motor_dir = 1;
+        }
+        float r_motor_throttle = (float(abs(motor_throttle)));
+
+        Serial.print("r_motor_throttle: ");
+        Serial.println(r_motor_throttle);
         
         // MOTOR 1 aka LEFT MOTOR
         if (l_motor_throttle == 0) {
@@ -340,7 +344,9 @@ void ser_routine() {
           Wire.write(0x00);
           Wire.endTransmission();
 
-          unsigned int scaled_throttle = (unsigned int)(l_motor_throttle / 100.0) * 4095; // convert from range of 0:100 -> 0:4095 for PCA9685 registers
+          scaled_throttle = (unsigned int)(l_motor_throttle / 100.0) * 4095; // convert from range of 0:100 -> 0:4095 for PCA9685 registers
+          Serial.print("CCW Mode - scaled_throttle: ");
+          Serial.println(scaled_throttle);
           throttle_off_h = highByte(scaled_throttle);
           throttle_off_l = lowByte(scaled_throttle);
           Wire.beginTransmission(PCA9685_addr);
