@@ -15,7 +15,7 @@
 const unsigned long t_controller = 100 ;  // time period for updating controller, in ms
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
-const unsigned long pid_timeout = 100*1000;  // microseconds per PID interval
+const unsigned long pid_timeout = (100000);  // microseconds per PID interval
 const unsigned long t_serial = 1000; // time period for reading/writing serial port, in ms
 
 
@@ -59,10 +59,10 @@ const byte encoder2_b_pin = 5;
 volatile unsigned int pid_counter {0}; // used with Timer0 to synchronize PID controller
 volatile unsigned int ser_counter {0}; // used with Timer1 to synchronize serial read/write
 
-volatile unsigned long enc1_t1= micros();
 volatile unsigned long enc1_t2 = micros();
-volatile unsigned long enc2_t1= micros();
+volatile unsigned long enc1_t1= micros();
 volatile unsigned long enc2_t2 = micros();
+volatile unsigned long enc2_t1= micros();
 
 volatile float r_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
 volatile float l_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
@@ -207,10 +207,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(encoder2_a_pin), enc2_ISR, RISING);
   
   // initialize time ticks for encoder times
-  enc1_t1= micros();
   enc1_t2 = micros();
-  enc2_t1= micros();
+  enc1_t1= micros();
   enc2_t2 = micros();
+  enc2_t1= micros();
   
   // Setup timer0 and timer1 to both interrupt every ~1 ms
   TCCR0A |= (1<<WGM01); // set timer0 waveform generation to Mode 2, '010'
@@ -249,19 +249,19 @@ void enc2_ISR() {
 void PID_routine() {
   unsigned long enc1_delta_t = enc1_t1-enc1_t2;
   unsigned long enc2_delta_t = enc2_t1-enc2_t2;
-
+    
   if ((micros() - enc1_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
-    r_motor_rpm = 0.0;
-  }
-  else {
-    r_motor_rpm = (rpm_coeff / (float(enc1_delta_t)));     
-  }
-  
-  if ((micros() - enc2_t1) > (pid_timeout) ) {
     l_motor_rpm = 0.0;
   }
   else {
-    l_motor_rpm = (rpm_coeff / (float(enc2_delta_t))); 
+    l_motor_rpm = (rpm_coeff / (float(enc1_delta_t)));     
+  }
+  
+  if ((micros() - enc2_t1) > (pid_timeout) ) {
+    r_motor_rpm = 0.0;
+  }
+  else {
+    r_motor_rpm = (rpm_coeff / (float(enc2_delta_t))); 
   }
 
   // shift historical errors, and calculate new error values
