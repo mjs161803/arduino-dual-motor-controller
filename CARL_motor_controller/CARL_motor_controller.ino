@@ -16,7 +16,7 @@ const unsigned long t_controller = 100 ;  // time period for updating controller
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const unsigned long pid_timeout = 100*1000;  // microseconds per PID interval
-const unsigned long t_serial = 500; // time period for reading/writing serial port, in ms
+const unsigned long t_serial = 1000; // time period for reading/writing serial port, in ms
 
 
 // Motor is Pololu P/N: 3055 with a 248.98:1 reduction gearbox
@@ -36,7 +36,7 @@ const unsigned long rpm_coeff {5000000}; // equal to rot_per_count*(10e6)*(60) c
  *    Ki = 2 * (Kp / Pu)
  *    Kd = (Kp * Pu) / 8
  */
-const float k_p = 1.1;
+const float k_p = 0.01;
 const float k_i = 0.0;
 const float k_d = 0.0;
 
@@ -300,7 +300,7 @@ void PID_routine() {
   }
 
   // push new values to motor controller via I2C
-  command_motors();
+  // command_motors();
 
 }
 
@@ -446,129 +446,129 @@ void ser_routine() {
       case 69: {// Testing Function - Set Manual Throttle
         Serial.println("Testing function 'E' has been removed.");
         // Read serial port for new throttle values
-//        in_byte2 = Serial.read(); // left motor throttle, high byte
-//        in_byte3 = Serial.read(); // left motor throttle, low byte
-//        in_byte4 = Serial.read(); // right motor throttle, high byte
-//        in_byte5 = Serial.read(); // right motor throttle, low byte
-//
-//        byte throttle_off_h {0};
-//        byte throttle_off_l {0};
-//        unsigned int scaled_throttle {0};
-//        
-//        int motor_throttle = ((0x00 << 8) | (in_byte3));
-//                
-//        if (motor_throttle < 0) {
-//          l_motor_dir = 0;
-//        } else {
-//          l_motor_dir = 1;
-//        }
-//        float l_motor_throttle = (float(abs(motor_throttle)));
-//                
-//        motor_throttle = ((0x00 << 8) | (in_byte5));
-//        
-//        if (motor_throttle < 0) {
-//          r_motor_dir = 0;
-//        } else {
-//          r_motor_dir = 1;
-//        }
-//        float r_motor_throttle = (float(abs(motor_throttle)));
-//
-//        Serial.print("l_motor_throttle: ");
-//        Serial.println(l_motor_throttle);
-//        Serial.print("r_motor_throttle: ");
-//        Serial.println(r_motor_throttle);
-//        
-//        // MOTOR 1 aka LEFT MOTOR
-//        if (l_motor_throttle == 0) {
-//          // STOP Mode. LED9_OFF and LED10_OFF need updating
-//          Wire.beginTransmission(PCA9685_addr); 
-//          Wire.write(LED8_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x10);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//          
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED9_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED10_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//        }
-//        else if (l_motor_dir == 0) {
-//          // CCW Mode. LED9_OFF = 0x0000 and LED10_OFF = 0x0VVV, where VVV is 12 bits from 0 -> 4095
-//          Wire.beginTransmission(PCA9685_addr); 
-//          Wire.write(LED8_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x10);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//          
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED9_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//
-//          scaled_throttle = (unsigned int)(l_motor_throttle / 100.0) * 4095; // convert from range of 0:100 -> 0:4095 for PCA9685 registers
-//          Serial.print("CCW Mode - scaled_throttle: ");
-//          Serial.println(scaled_throttle);
-//          throttle_off_h = highByte(scaled_throttle);
-//          throttle_off_l = lowByte(scaled_throttle);
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED10_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(throttle_off_l);
-//          Wire.write(throttle_off_h);
-//          Wire.endTransmission();
-//        } else {
-//          // CW Mode. LED9_OFF = 0x0VVV and LED10_OFF = 0x0000, where VVV is 12 bits from 0 -> 4095
-//          Wire.beginTransmission(PCA9685_addr); 
-//          Wire.write(LED8_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x10);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//          
-//          scaled_throttle = (unsigned int)((l_motor_throttle / 100.0) * 4095.0); // convert from range of 0:100 -> 0:4095 for PCA9685 registers
-//          Serial.print("CW Mode - scaled_throttle: ");
-//          Serial.println(scaled_throttle);
-//          throttle_off_h = highByte(scaled_throttle);
-//          throttle_off_l = lowByte(scaled_throttle);
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED9_ON_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(throttle_off_l);
-//          Wire.write(throttle_off_h);
-//          Wire.endTransmission();
-//          
-//          Wire.beginTransmission(PCA9685_addr);
-//          Wire.write(LED10_OFF_L);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.write(0x00);
-//          Wire.endTransmission();
-//
-//        }
-//
-//        delay(1000);
+        in_byte2 = Serial.read(); // left motor throttle, high byte
+        in_byte3 = Serial.read(); // left motor throttle, low byte
+        in_byte4 = Serial.read(); // right motor throttle, high byte
+        in_byte5 = Serial.read(); // right motor throttle, low byte
+
+        byte throttle_off_h {0};
+        byte throttle_off_l {0};
+        unsigned int scaled_throttle {0};
+        
+        int motor_throttle = ((0x00 << 8) | (in_byte3));
+                
+        if (motor_throttle < 0) {
+          l_motor_dir = 0;
+        } else {
+          l_motor_dir = 1;
+        }
+        float l_motor_throttle = (float(abs(motor_throttle)));
+                
+        motor_throttle = ((0x00 << 8) | (in_byte5));
+        
+        if (motor_throttle < 0) {
+          r_motor_dir = 0;
+        } else {
+          r_motor_dir = 1;
+        }
+        float r_motor_throttle = (float(abs(motor_throttle)));
+
+        Serial.print("l_motor_throttle: ");
+        Serial.println(l_motor_throttle);
+        Serial.print("r_motor_throttle: ");
+        Serial.println(r_motor_throttle);
+        
+        // MOTOR 1 aka LEFT MOTOR
+        if (l_motor_throttle == 0) {
+          // STOP Mode. LED9_OFF and LED10_OFF need updating
+          Wire.beginTransmission(PCA9685_addr); 
+          Wire.write(LED8_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x10);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+          
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED9_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED10_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+        }
+        else if (l_motor_dir == 0) {
+          // CCW Mode. LED9_OFF = 0x0000 and LED10_OFF = 0x0VVV, where VVV is 12 bits from 0 -> 4095
+          Wire.beginTransmission(PCA9685_addr); 
+          Wire.write(LED8_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x10);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+          
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED9_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+
+          scaled_throttle = (unsigned int)(l_motor_throttle / 100.0) * 4095; // convert from range of 0:100 -> 0:4095 for PCA9685 registers
+          Serial.print("CCW Mode - scaled_throttle: ");
+          Serial.println(scaled_throttle);
+          throttle_off_h = highByte(scaled_throttle);
+          throttle_off_l = lowByte(scaled_throttle);
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED10_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(throttle_off_l);
+          Wire.write(throttle_off_h);
+          Wire.endTransmission();
+        } else {
+          // CW Mode. LED9_OFF = 0x0VVV and LED10_OFF = 0x0000, where VVV is 12 bits from 0 -> 4095
+          Wire.beginTransmission(PCA9685_addr); 
+          Wire.write(LED8_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x10);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+          
+          scaled_throttle = (unsigned int)((l_motor_throttle / 100.0) * 4095.0); // convert from range of 0:100 -> 0:4095 for PCA9685 registers
+          Serial.print("CW Mode - scaled_throttle: ");
+          Serial.println(scaled_throttle);
+          throttle_off_h = highByte(scaled_throttle);
+          throttle_off_l = lowByte(scaled_throttle);
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED9_ON_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(throttle_off_l);
+          Wire.write(throttle_off_h);
+          Wire.endTransmission();
+          
+          Wire.beginTransmission(PCA9685_addr);
+          Wire.write(LED10_OFF_L);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.write(0x00);
+          Wire.endTransmission();
+
+        }
+
+//        delay(2000);
 //        // Now set for short brake
 //        // Set LED9 = LOW, LED10 = LOW to make Motor1 short brake
 //        // Set LED11= LOW, LED12 = LOW to make Motor2 short brake
@@ -604,7 +604,7 @@ void ser_routine() {
 //        Wire.write(0x00);
 //        Wire.write(0x00);
 //        Wire.endTransmission();
-//        
+        
         while(Serial.read() > -1);
         break;
       }
@@ -738,6 +738,38 @@ void loop() {
   if (ser_counter >= t_serial) {
     ser_counter = 0;
     ser_routine();
+    Serial.print("l_motor_rpm: ");
+    Serial.println(l_motor_rpm);
+    Serial.print("l_motor_dir: ");
+    Serial.println(l_motor_dir);
+    Serial.print("r_motor_rpm: ");
+    Serial.println(r_motor_rpm);
+    Serial.print("r_motor_dir: ");
+    Serial.println(r_motor_dir);
+    Serial.print("set_l_motor_rpm: ");
+    Serial.println(set_l_motor_rpm);
+    Serial.print("set_r_motor_rpm: ");
+    Serial.println(set_r_motor_rpm);
+    Serial.print("l_motor_error0: ");
+    Serial.println(l_motor_error0);
+    Serial.print("l_motor_error1: ");
+    Serial.println(l_motor_error1);
+    Serial.print("l_motor_error2: ");
+    Serial.println(l_motor_error2);
+    Serial.print("l_motor_error3: ");
+    Serial.println(l_motor_error3);
+    Serial.print("l_motor_error4: ");
+    Serial.println(l_motor_error4);
+    Serial.print("R_motor_error0: ");
+    Serial.println(r_motor_error0);
+    Serial.print("R_motor_error1: ");
+    Serial.println(r_motor_error1);
+    Serial.print("R_motor_error2: ");
+    Serial.println(r_motor_error2);
+    Serial.print("R_motor_error3: ");
+    Serial.println(r_motor_error3);
+    Serial.print("R_motor_error4: ");
+    Serial.println(r_motor_error4);
   }
 
 }

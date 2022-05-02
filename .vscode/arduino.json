@@ -1,6 +1,6 @@
 {
     "board": "arduino:avr:uno",
-    "sketch": "CARL_motor_controller.ino",
+    "sketch": "CARL_motor_controller/CARL_motor_controller.ino",
     "buildPreferences": [
         [
             "build.extra_flags",
