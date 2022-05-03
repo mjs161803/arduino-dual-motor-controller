@@ -23,7 +23,7 @@ const unsigned long t_serial = 1000; // time period for reading/writing serial p
 // Encoder is Pololu P/N: 4760, with 12 counts / revolution
 const float rot_per_count = 0.08333333; // inverse of 12 counts / 1 rotation, in cyc/count
 const float count_per_rot = 12.0; // 12 counts per rotation
-const unsigned long rpm_coeff {5000000}; // equal to rot_per_count*(10e6)*(60) cyc*ns/tick*min ; used to calculate rpm
+const unsigned long rpm_coeff {20000000}; // used to calculate rpm
 
 /* https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013 
  *  The Ziegler-Nichols method for PID tuning offers a bit more structured guide to setting PID values. 
@@ -308,7 +308,7 @@ void ser_routine() {
   if (Serial.available() > 0) {
     in_byte1 = Serial.read();
     switch(in_byte1) {
-      case 65: {// Set new RPM values 
+      case 65: {//  'A' - Set new RPM values 
         Serial.println("Entering Set-New-RPM-Values Function.");
         in_byte2 = Serial.read(); // left motor rpm, high byte
         in_byte3 = Serial.read(); // left motor rpm, low byte
@@ -336,7 +336,7 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
-      case 66: {// Query current RPM measurements
+      case 66: {//  'B' - Query current RPM measurements
         Serial.println("Entering Query_Current_RPM Function.");
         Serial.print("Current motor RPM's (l, r): ");
         Serial.print(l_motor_rpm);
@@ -345,12 +345,12 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
-      case 67: {// Query current battery voltages
+      case 67: {// 'C' - Query current battery voltages
         Serial.println("Battery voltages yet to be implemented...");
         while(Serial.read() > -1);
         break;
       }
-      case 68: {// Testing Function
+      case 68: {// 'D' - Testing Function
         Serial.println("Testing function 'D' has been removed.");
         // Set LED8 = HI, LED9 = PWM, LED10 = LOW to make Motor1 CW spin at 40% throttle
         // Set LED11= PWM, LED12=LOW, LED13 = HIGH to make motor2 CW spin at 40% throttle
@@ -443,13 +443,11 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
-      case 69: {// Testing Function - Set Manual Throttle
+      case 69: {// 'E' - Testing Function - Set Manual Throttle for left motor
         Serial.println("Testing function 'E' has been removed.");
         // Read serial port for new throttle values
         in_byte2 = Serial.read(); // left motor throttle, high byte
         in_byte3 = Serial.read(); // left motor throttle, low byte
-        in_byte4 = Serial.read(); // right motor throttle, high byte
-        in_byte5 = Serial.read(); // right motor throttle, low byte
 
         byte throttle_off_h {0};
         byte throttle_off_l {0};
@@ -463,20 +461,9 @@ void ser_routine() {
           l_motor_dir = 1;
         }
         float l_motor_throttle = (float(abs(motor_throttle)));
-                
-        motor_throttle = ((0x00 << 8) | (in_byte5));
-        
-        if (motor_throttle < 0) {
-          r_motor_dir = 0;
-        } else {
-          r_motor_dir = 1;
-        }
-        float r_motor_throttle = (float(abs(motor_throttle)));
 
         Serial.print("l_motor_throttle: ");
         Serial.println(l_motor_throttle);
-        Serial.print("r_motor_throttle: ");
-        Serial.println(r_motor_throttle);
         
         // MOTOR 1 aka LEFT MOTOR
         if (l_motor_throttle == 0) {
@@ -569,47 +556,41 @@ void ser_routine() {
         }
 
 //        delay(2000);
-//        // Now set for short brake
-//        // Set LED9 = LOW, LED10 = LOW to make Motor1 short brake
-//        // Set LED11= LOW, LED12 = LOW to make Motor2 short brake
-//    
-//        Wire.beginTransmission(PCA9685_addr); 
-//        Wire.write(LED9_ON_L);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.endTransmission();
-//
-//        Wire.beginTransmission(PCA9685_addr); 
-//        Wire.write(LED10_ON_L);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.endTransmission();
-//    
-//        Wire.beginTransmission(PCA9685_addr); 
-//        Wire.write(LED11_ON_L);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.endTransmission();
-//
-//        Wire.beginTransmission(PCA9685_addr); 
-//        Wire.write(LED12_ON_L);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.write(0x00);
-//        Wire.endTransmission();
+
+        while(Serial.read() > -1);
+        break;
+      }
+      case 70: {// 'F' - Testing Function - Stop both motors
+        Serial.println("Stopping Motors.");
+        // Now set for short brake
+        // Update LED9 = LOW, LED10 = LOW to make Motor1 short brake
+        // Update LED11= LOW, LED12 = LOW to make Motor2 short brake
+   
+        Wire.beginTransmission(PCA9685_addr); 
+        Wire.write(LED9_ON_L);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.write(0x00);
+        Wire.endTransmission();
         
         while(Serial.read() > -1);
         break;
       }
       default: {
-        Serial.println("Unrecognized command?");
+        Serial.println("Unrecognized command.");
         while(Serial.read() > -1);
         break;
       }
