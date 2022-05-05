@@ -1,12 +1,20 @@
-/* Message formats received over Serial:
- *    - [byte = 0x41 = 'A'][int1][int2] : set rpm for left and right motor. signed int1 is left motor (-32,768 -> +32,767 rad/sec) and 2nd signed int is right motor (-32,768 -> +32,767 rad/sec) 
- *    - [byte = 0x42 = 'B'] : request current angular velocities for left and right motor
- *    - [byte = 0x43 = 'C'] : request current battery voltages
+/* Message formats received by Arduino over Serial, from host computer:
+ *    - [0x41 = 'A'][0xYY YY][0xZZ ZZ] : set rpm for left and right motor. Both Y and Z are signed int's. int1 
+ *    - is the left motor (-32,768 -> +32,767 RPM) and 2nd signed int is the right motor (-32,768 -> +32,767 RPM) 
+ *    - [0x42 = 'B'] : request current RPM for left and right motor
+ *    - [0x43 = 'C'] : request current battery voltages
+ *    - [0x44 = 'D'] : Spin both motors at 33% throttle for 1 second
+ *    - [0x45 = 'E'][0xYY] : Set left motor throttle to (0xYY)% throttle 
+ *    - [0x46 = 'F'] : Stop both motors.
+ *    - [0x47 = 'G'][0xXX][0xYY YY][0xZZ ZZ] : Rotate left motor 0xYYYY full rotations, and right motor 0xZZZZ
+ *            full rotations, using 0xXX% throttle on both motors.  0xYYYY and 0xZZZZ are 
+ *            unsigned 16-bit integers (0 -> 65,535 rotations)
  *    
- *    
- * Message formats sent over Serial:
- *    - "1##" currently reported angular velocities for left (1st #, -128 -> +128) and right motor (2nd #, -128 -> +128)
- *    - "2AB" current battery voltages for battery#1 (A deci-volts, 0-255) and battery#2 (B deci-volts, 0-255)
+ * Message formats sent by Arduino over Serial, to host computer:
+ *    - "0x01 LL LL RR RR" currently reported RPMs for left (0xLL LL => -32,768 -> +32,767) and right motor 
+ *            (0xRR RR => -32,768 -> +32,767)
+ *    - "0x02 YY ZZ" current battery voltages for battery#1 (0xYY deci-volts => 0-255) and battery#2 
+ *            (0xZZ deci-volts => 0-255)
  * 
  */
  
@@ -21,8 +29,7 @@ const unsigned long t_serial = 1000; // time period for reading/writing serial p
 
 // Motor is Pololu P/N: 3055 with a 248.98:1 reduction gearbox
 // Encoder is Pololu P/N: 4760, with 12 counts / revolution
-const float rot_per_count = 0.08333333; // inverse of 12 counts / 1 rotation, in cyc/count
-const float count_per_rot = 12.0; // 12 counts per rotation
+
 const unsigned long rpm_coeff {20000000}; // used to calculate rpm
 
 /* https://www.thorlabs.com/newgrouppage9.cfm?objectgroup_id=9013 
@@ -444,7 +451,7 @@ void ser_routine() {
         break;
       }
       case 69: {// 'E' - Testing Function - Set Manual Throttle for left motor
-        Serial.println("Testing function 'E' has been removed.");
+        Serial.println("Setting left motor throttle manually.");
         // Read serial port for new throttle values
         in_byte2 = Serial.read(); // left motor throttle, high byte
         in_byte3 = Serial.read(); // left motor throttle, low byte
@@ -719,38 +726,7 @@ void loop() {
   if (ser_counter >= t_serial) {
     ser_counter = 0;
     ser_routine();
-    Serial.print("l_motor_rpm: ");
-    Serial.println(l_motor_rpm);
-    Serial.print("l_motor_dir: ");
-    Serial.println(l_motor_dir);
-    Serial.print("r_motor_rpm: ");
-    Serial.println(r_motor_rpm);
-    Serial.print("r_motor_dir: ");
-    Serial.println(r_motor_dir);
-    Serial.print("set_l_motor_rpm: ");
-    Serial.println(set_l_motor_rpm);
-    Serial.print("set_r_motor_rpm: ");
-    Serial.println(set_r_motor_rpm);
-    Serial.print("l_motor_error0: ");
-    Serial.println(l_motor_error0);
-    Serial.print("l_motor_error1: ");
-    Serial.println(l_motor_error1);
-    Serial.print("l_motor_error2: ");
-    Serial.println(l_motor_error2);
-    Serial.print("l_motor_error3: ");
-    Serial.println(l_motor_error3);
-    Serial.print("l_motor_error4: ");
-    Serial.println(l_motor_error4);
-    Serial.print("R_motor_error0: ");
-    Serial.println(r_motor_error0);
-    Serial.print("R_motor_error1: ");
-    Serial.println(r_motor_error1);
-    Serial.print("R_motor_error2: ");
-    Serial.println(r_motor_error2);
-    Serial.print("R_motor_error3: ");
-    Serial.println(r_motor_error3);
-    Serial.print("R_motor_error4: ");
-    Serial.println(r_motor_error4);
+    
   }
 
 }
