@@ -344,8 +344,14 @@ void ser_routine() {
         break;
       }
       case 66: {//  'B' - Query current RPM measurements
-        
-        
+        Serial.print(0x01);
+        int rpm = int(l_motor_rpm);
+        Serial.print(highByte(rpm));
+        Serial.print(lowByte(rpm));
+        rpm = int(r_motor_rpm);
+        Serial.print(highByte(rpm));
+        Serial.print(lowByte(rpm));
+
         while(Serial.read() > -1);
         break;
       }
