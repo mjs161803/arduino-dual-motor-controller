@@ -13,44 +13,54 @@ os.system('stty -F /dev/ttyACM0 115200 -parenb -parodd -cmspar cs8 hupcl -cstopb
 
 serial_path = '/dev/ttyACM0'
 serial_baud = 115200
-serial_timeout = .5
+serial_timeout = 1.5
 
-ser = serial.Serial(serial_path, baudrate = serial_baud, timeout = serial_timeout)
-if(ser):
+arduino = serial.Serial(serial_path, baudrate = serial_baud, timeout = serial_timeout)
+time.sleep(2)
+
+if(arduino):
     print("Serial port opened successfully.")
 else:
     print("Unable to open serial port.")
 
-time.sleep(1)
+print("Clearing serial buffer...")
+while(arduino.in_waiting):
+    data = arduino.readline()
+
+print("Serial queue cleared!")
 
 # Send command to Arduino to query for current motor RPM's (should be zero)
 print("Querying Arduino for current RPM's ('B')...")
 command = b'\x42' # 'B'
-time.sleep(1)
-data = ser.readline()
-data = (data.decode("utf-8"))
+arduino.write(command)
+data = arduino.readline()
 print(data)
 
 time.sleep(1)
 
 # Send command to Arduino to set left motor throttle to 33%
-print("Commanding left motor to 33% throttle ('E0!00')...")
-command = b'\x45\x00\x21\x00\x00'
+print("Command both motors to spin at 40% throttle ('D')...")
+command = b'\x44'
+arduino.write(command)
+data = arduino.readline()
+print(data)
 
 time.sleep(1)
 
 # Send command to Arduino to query for current motor RPM's (should be zero)
-print("Querying Arduino for current RPM's ('B')...\n")
+print("Querying Arduino for current RPM's ('B')...")
 command = b'\x42'
-time.sleep(1)
-data = ser.readline()
-data = (data.decode("utf-8"))
+arduino.write(command)
+data = arduino.readline()
 print(data)
 
 # Send command to Arduino to stop both motors
-print("Commanding all motors to stop...\n")
+print("Commanding all motors to stop...")
 command = b'\x46'
+arduino.write(command)
+data = arduino.readline()
+print(data)
 
-print("Test Complete.\n")
+print("Test Complete.")
 
-ser.close()
+arduino.close()

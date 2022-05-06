@@ -345,12 +345,10 @@ void ser_routine() {
       }
       case 66: {//  'B' - Query current RPM measurements
         Serial.print(0x01);
-        int rpm = int(l_motor_rpm);
-        Serial.print(highByte(rpm));
-        Serial.print(lowByte(rpm));
-        rpm = int(r_motor_rpm);
-        Serial.print(highByte(rpm));
-        Serial.print(lowByte(rpm));
+        Serial.print(" ");
+        Serial.print(l_motor_rpm);
+        Serial.print(" ");
+        Serial.println(r_motor_rpm);
 
         while(Serial.read() > -1);
         break;
@@ -692,6 +690,7 @@ void loop() {
   if (ser_counter >= t_serial) {
     ser_counter = 0;
     ser_routine();
+    // Serial.println("Serial routine completed.");
     
   }
 
