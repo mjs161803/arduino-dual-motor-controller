@@ -13,8 +13,7 @@
  * Message formats sent by Arduino over Serial, to host computer:
  *    - "0x01 LL LL RR RR" currently reported RPMs for left (0xLL LL => -32,768 -> +32,767) and right motor 
  *            (0xRR RR => -32,768 -> +32,767)
- *    - "0x02 YY ZZ" current battery voltages for battery#1 (0xYY deci-volts => 0-255) and battery#2 
- *            (0xZZ deci-volts => 0-255)
+ *    - "0x02 Y Z" current battery voltages for battery#1 (Y) and battery#2 (Z) 
  * 
  */
  
@@ -113,6 +112,10 @@ volatile byte LED13_OFF_L = 0x3C;
 volatile byte throttle_off_l {0x66};
 volatile byte throttle_off_h {0x06}; // 0x666 results in 40% throttle
 
+// Battery voltage calculation coefficients
+volatile double coeff1 = (4.993) / (204.6 * 1.002); // coefficient to multiply voltage divider sensor input to calculate actual battery voltage
+volatile double coeff2 = (9.94) / (204.6 * 1.986); // coefficient to multiply voltage divider sensor input to calculate actual battery voltage
+        
 
 
 void setup() {
@@ -354,7 +357,21 @@ void ser_routine() {
         break;
       }
       case 67: {// 'C' - Query current battery voltages
-        Serial.println("Battery voltages yet to be implemented...");
+        // Battery 1 voltage is divided by a 1:4.983 high-impedence voltage divider
+        // Battery 2 voltage is divided by a 1:5.005 high-impedence voltage divider
+        // 
+        // These values are specific to the voltage divider resisters I used
+        // on the CARL robot
+        double b1_sensor = analogRead(A0);
+        double b2_sensor = analogRead(A1);
+        double v1 = b1_sensor * coeff1;
+        double v2 = b2_sensor * coeff2;
+        Serial.print(0x02);
+        Serial.print(" ");
+        Serial.print(v1, 2);
+        Serial.print(" ");
+        Serial.println(v2, 2);
+
         while(Serial.read() > -1);
         break;
       }
