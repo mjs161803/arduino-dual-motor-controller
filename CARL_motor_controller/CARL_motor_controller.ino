@@ -24,7 +24,7 @@ const unsigned long t_controller = 100 ;  // time period for updating controller
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const unsigned long pid_timeout = (100000);  // microseconds per PID interval
-const unsigned long t_serial = 1000; // time period for reading/writing serial port, in ms
+const unsigned long t_serial = 300; // time period for reading/writing serial port, in ms
 
 
 // Motor is Pololu P/N: 3055 with a 248.98:1 reduction gearbox
@@ -414,7 +414,7 @@ void ser_routine() {
         break;
       }
       case 69: {// 'E' - Testing Function - Set Manual Throttle for left motor
-        Serial.println("Setting left motor throttle manually.");
+        //Serial.println("Setting left motor throttle manually.");
         // Read serial port for new throttle values
         in_byte2 = Serial.read(); // left motor throttle, high byte
         in_byte3 = Serial.read(); // left motor throttle, low byte
@@ -434,9 +434,6 @@ void ser_routine() {
         if (l_motor_throttle > 100.0) {
           l_motor_throttle = 100.0;
         }
-
-        Serial.print("l_motor_throttle: ");
-        Serial.println(l_motor_throttle);
         
         // MOTOR 1 aka LEFT MOTOR
         if (l_motor_throttle == 0) {
@@ -484,8 +481,6 @@ void ser_routine() {
           Wire.endTransmission();
 
           scaled_throttle = (unsigned int)(l_motor_throttle / 100.0) * 4095; // convert from range of 0:100 -> 0:4095 for PCA9685 registers
-          Serial.print("CCW Mode - scaled_throttle: ");
-          Serial.println(scaled_throttle);
           throttle_off_h = highByte(scaled_throttle);
           throttle_off_l = lowByte(scaled_throttle);
           Wire.beginTransmission(PCA9685_addr);
@@ -506,8 +501,6 @@ void ser_routine() {
           Wire.endTransmission();
           
           scaled_throttle = (unsigned int)((l_motor_throttle / 100.0) * 4095.0); // convert from range of 0:100 -> 0:4095 for PCA9685 registers
-          Serial.print("CW Mode - scaled_throttle: ");
-          Serial.println(scaled_throttle);
           throttle_off_h = highByte(scaled_throttle);
           throttle_off_l = lowByte(scaled_throttle);
           Wire.beginTransmission(PCA9685_addr);
