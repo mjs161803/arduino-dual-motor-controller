@@ -9,6 +9,8 @@
  *    - [0x47 = 'G'][0xXX][0xYY YY][0xZZ ZZ] : Rotate left motor 0xYYYY full rotations, and right motor 0xZZZZ
  *            full rotations, using 0xXX% throttle on both motors.  0xYYYY and 0xZZZZ are 
  *            unsigned 16-bit integers (0 -> 65,535 rotations)
+ *    - [0x48 = 'H'][0xWW WW WW WW][0xYY YY YY YY][0xZZ ZZ ZZ ZZ] : Update PID variables. W = K_p, Y = K_i, Z = K_d. 
+ *            W, Y and Z are all 32-bit floating point variables.
  *    
  * Message formats sent by Arduino over Serial, to host computer:
  *    - "0x01 LL LL RR RR" currently reported RPMs for left (0xLL LL => -32,768 -> +32,767) and right motor 
@@ -19,7 +21,7 @@
  
 #include <Wire.h>
 
-const unsigned long t_controller = 500 ;  // time period for updating controller, in ms
+const unsigned long t_controller = 100 ;  // time period for updating controller, in ms
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const unsigned long pid_timeout = (100000);  // microseconds per PID interval
@@ -42,9 +44,9 @@ const unsigned long rpm_coeff {20000000}; // used to calculate rpm
  *    Ki = 2 * (Kp / Pu)
  *    Kd = (Kp * Pu) / 8
  */
-const float k_p = 0.01;
-const float k_i = 0.0;
-const float k_d = 0.0;
+volatile float k_p = 0.003;
+volatile float k_i = 0.0;
+volatile float k_d = 0.0;
 
 volatile float l_motor_error0 {0.0};
 volatile float r_motor_error0 {0.0};
@@ -247,13 +249,11 @@ ISR(TIMER1_COMPA_vect) {
 void enc1_ISR() {
   enc1_t2 = enc1_t1;
   enc1_t1 = micros();
-  r_motor_dir = digitalRead(encoder1_b_pin);
 }
 
 void enc2_ISR() {
   enc2_t2 = enc2_t1;
   enc2_t1 = micros();
-  l_motor_dir = digitalRead(encoder2_b_pin);
 }
 
 void PID_routine() {
@@ -569,6 +569,22 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
+      case 71: {// 'G' - Update PID variables
+        Serial.println("Updating PID variables.");
+        float pid_p, pid_i, pid_d;
+        in_byte2 = Serial.read(); // 
+        in_byte3 = Serial.read(); // 
+        in_byte4 = Serial.read(); // 
+        in_byte5 = Serial.read(); // 
+
+        pid_p = (float)((in_byte2 << 32) | (in_byte3 << 16) | (in_byte4 << 8) | in_byte5);
+        Serial.print("New K_p value:");
+        Serial.println(pid_p);
+
+        while(Serial.read() > -1);
+        break;
+      }
+      
       default: {
         Serial.println("Unrecognized command.");
         while(Serial.read() > -1);
@@ -587,7 +603,6 @@ void command_motors() {
   // MOTOR 1 aka LEFT MOTOR
   if (l_motor_throttle == 0) {
     // STOP Mode. LED9_OFF and LED10_OFF need updating
-    Serial.println("left motor STOP... scaled_throttle: 0");
     Wire.beginTransmission(PCA9685_addr); 
     Wire.write(LED8_ON_L);
     Wire.write(0x00);
@@ -634,8 +649,6 @@ void command_motors() {
       if (scaled_throttle > 4095) {scaled_throttle = 4095;}
       throttle_off_h = highByte(scaled_throttle);
       throttle_off_l = lowByte(scaled_throttle);
-      Serial.print("left motor CCW... scaled_throttle: ");
-      Serial.println(scaled_throttle);
       Wire.beginTransmission(PCA9685_addr);
       Wire.write(LED10_ON_L);
       Wire.write(0x00);
@@ -650,8 +663,6 @@ void command_motors() {
         if (scaled_throttle > 4095) {scaled_throttle = 4095;}
         throttle_off_h = highByte(scaled_throttle);
         throttle_off_l = lowByte(scaled_throttle);
-        Serial.print("left motor CW... scaled_throttle: ");
-        Serial.println(scaled_throttle);
         
         Wire.beginTransmission(PCA9685_addr); 
         Wire.write(LED8_ON_L);
@@ -681,8 +692,6 @@ void command_motors() {
   // MOTOR 2 aka RIGHT MOTOR
   if (r_motor_throttle == 0) {
     // STOP Mode. LED11_OFF and LED12_OFF need updating
-    Serial.println("right motor STOP... scaled_throttle: ");
-      
     Wire.beginTransmission(PCA9685_addr); 
     Wire.write(LED11_ON_L);
     Wire.write(0x00);
@@ -722,8 +731,6 @@ void command_motors() {
       if (scaled_throttle > 4095) {scaled_throttle = 4095;}
       throttle_off_h = highByte(scaled_throttle);
       throttle_off_l = lowByte(scaled_throttle);
-      Serial.print("right motor CCW... scaled_throttle: ");
-      Serial.println(scaled_throttle);
       Wire.beginTransmission(PCA9685_addr); 
       Wire.write(LED12_OFF_L);
       Wire.write(throttle_off_l);
@@ -752,8 +759,6 @@ void command_motors() {
         if (scaled_throttle > 4095) {scaled_throttle = 4095;}
         throttle_off_h = highByte(scaled_throttle);
         throttle_off_l = lowByte(scaled_throttle);
-        Serial.print("right motor CW... scaled_throttle: ");
-        Serial.println(scaled_throttle);
         Wire.beginTransmission(PCA9685_addr); 
         Wire.write(LED11_ON_L);
         Wire.write(0x00);
@@ -783,7 +788,7 @@ void loop() {
     ser_counter = 0;
     ser_routine();
 
-    Serial.print("set_l_motor_rpm: ");
+    Serial.print("\nset_l_motor_rpm: ");
     Serial.println(set_l_motor_rpm);
     Serial.print("l_motor_rpm: ");
     Serial.println(l_motor_rpm);
