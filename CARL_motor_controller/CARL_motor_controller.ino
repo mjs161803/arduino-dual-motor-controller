@@ -571,15 +571,25 @@ void ser_routine() {
       }
       case 71: {// 'G' - Update PID variables
         Serial.println("Updating PID variables.");
-        float pid_p, pid_i, pid_d;
-        in_byte2 = Serial.read(); // 
-        in_byte3 = Serial.read(); // 
-        in_byte4 = Serial.read(); // 
-        in_byte5 = Serial.read(); // 
+        long in_b2, in_b3, in_b4, in_b5, in_long;
 
-        pid_p = (float)((in_byte2 << 32) | (in_byte3 << 16) | (in_byte4 << 8) | in_byte5);
+        in_b2 = Serial.read(); // 
+        in_b3 = Serial.read(); // 
+        in_b4 = Serial.read(); // 
+        in_b5 = Serial.read(); // 
+        Serial.println(in_b2);
+        Serial.println(in_b3);
+        Serial.println(in_b4);
+        Serial.println(in_b5);
+        
+        in_long = (in_b5 << 24) | (in_b4 << 16) | (in_b3 << 8) | in_b2;
+        Serial.println(in_long);
+        float* p_pid = new float;
+        *p_pid = *(&in_long);
+
         Serial.print("New K_p value:");
-        Serial.println(pid_p);
+        Serial.println(*p_pid);
+        delete p_pid;
 
         while(Serial.read() > -1);
         break;
@@ -788,18 +798,6 @@ void loop() {
     ser_counter = 0;
     ser_routine();
 
-    Serial.print("\nset_l_motor_rpm: ");
-    Serial.println(set_l_motor_rpm);
-    Serial.print("l_motor_rpm: ");
-    Serial.println(l_motor_rpm);
-    Serial.print("l_motor_throttle: ");
-    Serial.println(l_motor_throttle);
-    Serial.print("set_r_motor_rpm: ");
-    Serial.println(set_r_motor_rpm);
-    Serial.print("r_motor_rpm: ");
-    Serial.println(r_motor_rpm);
-    Serial.print("r_motor_throttle: ");
-    Serial.println(r_motor_throttle);
   }
 
 }
