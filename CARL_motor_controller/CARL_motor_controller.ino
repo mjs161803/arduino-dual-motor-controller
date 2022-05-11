@@ -1,6 +1,9 @@
 /* Message formats received by Arduino over Serial, from host computer:
- *    - [0x41 = 'A'][0xYY YY][0xZZ ZZ] : set rpm for left and right motor. Both Y and Z are signed int's. int1 
- *    - is the left motor (-32,768 -> +32,767 RPM) and 2nd signed int is the right motor (-32,768 -> +32,767 RPM) 
+ *    - [0x41 = 'A'][0xYY YY][0xZZ ZZ][0xRR RR][0xSS SS] : set rpm for left and right motor. Both Y and Z 
+ *        are signed int's. int1 is the left motor (-32,768 -> +32,767 RPM) and 2nd signed int is the right 
+ *        motor (-32,768 -> +32,767 RPM). Continue rotating left motor until R full rotations have occured,
+ *        and then stop the motor.  Continue rotating right motor until S full rotations have occured, and 
+ *        then stop the motor. 
  *    - [0x42 = 'B'] : request current RPM for left and right motor
  *    - [0x43 = 'C'] : request current battery voltages
  *    - [0x44 = 'D'] : TEST FUNCTION - Spin both motors at 33% throttle for 1 second
@@ -69,7 +72,11 @@ volatile unsigned long enc1_t2 = micros();
 volatile unsigned long enc1_t1= micros();
 volatile unsigned long enc2_t2 = micros();
 volatile unsigned long enc2_t1= micros();
+volatile unsigned long enc1_count {0};
+volatile unsigned long enc2_count {0};
 
+volatile bool l_motor_enable {false}; 
+volatile bool r_motor_enable {false}; 
 volatile float r_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
 volatile float l_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
 volatile int r_motor_dir = 0;          // commanded motor direction (1 = forward, 0 = backwards)
@@ -78,13 +85,22 @@ volatile float set_l_motor_rpm {0.0};  // commanded angular velocity for left mo
 volatile float set_r_motor_rpm {0.0};  // commanded angular velocity for right motor, in RPM
 volatile float l_motor_throttle {0.0}; // commanded motor throttle, scaled from 0 -> 100
 volatile float r_motor_throttle {0.0}; // commanded motor throttle, scaled from 0 -> 100
+volatile unsigned long max_enc1_count {0}; // maximum number of interrupts on encoder1; used to manage duration
+volatile unsigned long max_enc2_count {0}; // maximum number of interrupts on encoder2; used to manage duration
 
 unsigned int in_byte1 {0};
 unsigned int in_byte2 {0};
 unsigned int in_byte3 {0};
 unsigned int in_byte4 {0};
 unsigned int in_byte5 {0};
-unsigned int in_byte6 {0}; 
+unsigned long in_byte6 {0}; 
+unsigned long in_byte7 {0}; 
+unsigned long in_byte8 {0}; 
+unsigned long in_byte9 {0}; 
+unsigned long in_byte10 {0}; 
+unsigned long in_byte11 {0}; 
+unsigned long in_byte12 {0}; 
+unsigned long in_byte13 {0}; 
 
 
 // PCA9685 PWM Driver Chip, Accessible on I2C bus
@@ -247,69 +263,73 @@ ISR(TIMER1_COMPA_vect) {
 void enc1_ISR() {
   enc1_t2 = enc1_t1;
   enc1_t1 = micros();
+  enc1_count++;
 }
 
 void enc2_ISR() {
   enc2_t2 = enc2_t1;
   enc2_t1 = micros();
+  enc2_count++;
 }
 
 void PID_routine() {
-  unsigned long enc1_delta_t = enc1_t1-enc1_t2;
-  unsigned long enc2_delta_t = enc2_t1-enc2_t2;
-    
-  if ((micros() - enc1_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
-    l_motor_rpm = 0.0;
-  }
-  else {
-    l_motor_rpm = (rpm_coeff / (float(enc1_delta_t)));     
-  }
-  
-  if ((micros() - enc2_t1) > (pid_timeout) ) {
-    r_motor_rpm = 0.0;
-  }
-  else {
-    r_motor_rpm = (rpm_coeff / (float(enc2_delta_t))); 
-  }
-
-  // shift historical errors, and calculate new error values
-  l_motor_error4 = l_motor_error3;
-  r_motor_error4 = r_motor_error3;
-  l_motor_error3 = l_motor_error2;
-  r_motor_error3 = r_motor_error2;
-  l_motor_error2 = l_motor_error1;
-  r_motor_error2 = r_motor_error1;
-  l_motor_error1 = l_motor_error0;
-  r_motor_error1 = r_motor_error0;
-
-  r_motor_error0 = set_r_motor_rpm - r_motor_rpm;
-  l_motor_error0 = set_l_motor_rpm - l_motor_rpm;
-   
-  // calc new throttle set points (SPs)
-  l_motor_throttle =          (k_p * l_motor_error0) + 
+  if(l_motor_enable) {
+    if (enc1_count < max_enc1_count) {
+      unsigned long enc1_delta_t = enc1_t1-enc1_t2;
+      if ((micros() - enc1_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
+        l_motor_rpm = 0.0;
+      }
+      else {
+        l_motor_rpm = (rpm_coeff / (float(enc1_delta_t)));     
+      }
+      l_motor_error4 = l_motor_error3;
+      l_motor_error3 = l_motor_error2;
+      l_motor_error2 = l_motor_error1;
+      l_motor_error1 = l_motor_error0;
+      l_motor_error0 = set_l_motor_rpm - l_motor_rpm;
+      l_motor_throttle =        (k_p * l_motor_error0) + 
                                 (k_i * (l_motor_error0 + l_motor_error1 + l_motor_error2 + l_motor_error3 + l_motor_error4)) +
                                 (k_d * (l_motor_error0 - l_motor_error1));
-                                
-  r_motor_throttle =          (k_p * r_motor_error0) + 
+      if (l_motor_throttle > 100.0) {
+        l_motor_throttle = 100.0;
+      } else if (l_motor_throttle < 6.0) {
+        l_motor_throttle = 0.0;
+      }
+
+    } else {
+      l_motor_enable = false;
+      l_motor_throttle = 0.0;
+    }
+  }
+  if(r_motor_enable) {
+    if (enc2_count < max_enc2_count) {
+      unsigned long enc2_delta_t = enc2_t1-enc2_t2;
+      if ((micros() - enc2_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
+        r_motor_rpm = 0.0;
+      }
+      else {
+        r_motor_rpm = (rpm_coeff / (float(enc2_delta_t)));     
+      }
+      r_motor_error4 = r_motor_error3;
+      r_motor_error3 = r_motor_error2;
+      r_motor_error2 = r_motor_error1;
+      r_motor_error1 = r_motor_error0;
+      r_motor_error0 = set_r_motor_rpm - r_motor_rpm;
+      r_motor_throttle =        (k_p * r_motor_error0) + 
                                 (k_i * (r_motor_error0 + r_motor_error1 + r_motor_error2 + r_motor_error3 + r_motor_error4)) +
                                 (k_d * (r_motor_error0 - r_motor_error1));
-  
-  // check throttles for max/min/zero
-  if (l_motor_throttle > 100.0) {
-    l_motor_throttle = 100.0;
-  } else if (l_motor_throttle < 6.0) {
-    l_motor_throttle = 0.0;
+      if (r_motor_throttle > 100.0) {
+        r_motor_throttle = 100.0;
+      } else if (r_motor_throttle < 6.0) {
+        r_motor_throttle = 0.0;
+      }
+    } else {
+      r_motor_enable = false;
+      r_motor_throttle = 0.0;
+    }
   }
-  
-  if (r_motor_throttle > 100.0) {
-    r_motor_throttle = 100.0;
-  } else if (r_motor_throttle < 6.0) {
-    r_motor_throttle = 0.0;
-  }
-
-  // push new values to motor controller via I2C
   command_motors();
-
+  
 }
 
 void ser_routine() {
@@ -321,7 +341,19 @@ void ser_routine() {
         in_byte3 = Serial.read(); // left motor rpm, low byte
         in_byte4 = Serial.read(); // right motor rpm, high byte
         in_byte5 = Serial.read(); // right motor rpm, low byte
+
+        in_byte6 = Serial.read(); // left motor max count, high3 byte
+        in_byte7 = Serial.read(); // left motor max count, high2 byte
+        in_byte8 = Serial.read(); // left motor max count, high1 byte
+        in_byte9 = Serial.read(); // left motor max count, low byte
+        in_byte10 = Serial.read(); // right motor max count, high3 byte
+        in_byte11 = Serial.read(); // right motor max count, high2 byte
+        in_byte12 = Serial.read(); // right motor max count, high1 byte
+        in_byte13 = Serial.read(); // right motor max count, low byte
         
+        max_enc1_count = ((in_byte6 << 24) | (in_byte7 << 16) | (in_byte8 << 8) | in_byte9);
+        max_enc2_count = ((in_byte10 << 24) | (in_byte11 << 16) | (in_byte12 << 8) | in_byte13);
+
         int motor_rpm = ((in_byte2 << 8) | (in_byte3));
         
         if (motor_rpm < 0) {
@@ -339,6 +371,11 @@ void ser_routine() {
           r_motor_dir = 1;
         }
         set_r_motor_rpm = (float(abs(motor_rpm)));
+        
+        enc1_count=0;
+        enc2_count=0;
+        l_motor_enable = true;
+        r_motor_enable = true;
         
         while(Serial.read() > -1);
         break;
