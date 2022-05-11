@@ -27,14 +27,22 @@ while(arduino.in_waiting):
 print("Serial queue cleared!")
 
 
-pid_p = 0.002
+pid_p = 0.004
+pid_i = 0.005
+pid_d = 0.006
 
-ba = bytearray(struct.pack("f", pid_p))
-
-command = b'\x47' # ['G']
+command = b'\x47' + bytes((str(pid_p)+"\n"), 'UTF-8')  # ['G'][pid_p][\n]
 arduino.write(command)
-for elem in ba:
-    arduino.write((elem.to_bytes(1, byteorder='little')))
- 
+
+time.sleep(.6)
+
+command = b'\x48' + bytes((str(pid_i)+"\n"), 'UTF-8')  # ['H'][pid_i][\n]
+arduino.write(command)
+
+time.sleep(.6)
+
+command = b'\x49' + bytes((str(pid_d)+"\n"), 'UTF-8')  # ['I'][pid_d][\n]
+arduino.write(command)
+
 arduino.close()
 print("Test complete.")

@@ -3,14 +3,12 @@
  *    - is the left motor (-32,768 -> +32,767 RPM) and 2nd signed int is the right motor (-32,768 -> +32,767 RPM) 
  *    - [0x42 = 'B'] : request current RPM for left and right motor
  *    - [0x43 = 'C'] : request current battery voltages
- *    - [0x44 = 'D'] : Spin both motors at 33% throttle for 1 second
- *    - [0x45 = 'E'][0xYY] : Set left motor throttle to (0xYY)% throttle 
- *    - [0x46 = 'F'] : Stop both motors.
- *    - [0x47 = 'G'][0xXX][0xYY YY][0xZZ ZZ] : Rotate left motor 0xYYYY full rotations, and right motor 0xZZZZ
- *            full rotations, using 0xXX% throttle on both motors.  0xYYYY and 0xZZZZ are 
- *            unsigned 16-bit integers (0 -> 65,535 rotations)
- *    - [0x48 = 'H'][0xWW WW WW WW][0xYY YY YY YY][0xZZ ZZ ZZ ZZ] : Update PID variables. W = K_p, Y = K_i, Z = K_d. 
- *            W, Y and Z are all 32-bit floating point variables.
+ *    - [0x44 = 'D'] : TEST FUNCTION - Spin both motors at 33% throttle for 1 second
+ *    - [0x45 = 'E'][0xYY] : TEST FUNCTION - Set left motor throttle to (0xYY)% throttle 
+ *    - [0x46 = 'F'] : TEST FUNCTION - Stop both motors. (won't do anything if PID controller enabled)
+ *    - [0x47 = 'G'][UTF-8 string] : Update PID variable Kp
+ *    - [0x48 = 'H'][UTF-8 string] : Update PID variable Ki
+ *    - [0x49 = 'I'][UTF-8 string] : Update PID variable Kd
  *    
  * Message formats sent by Arduino over Serial, to host computer:
  *    - "0x01 LL LL RR RR" currently reported RPMs for left (0xLL LL => -32,768 -> +32,767) and right motor 
@@ -25,7 +23,7 @@ const unsigned long t_controller = 100 ;  // time period for updating controller
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const unsigned long pid_timeout = (100000);  // microseconds per PID interval
-const unsigned long t_serial = 1000; // time period for reading/writing serial port, in ms
+const unsigned long t_serial = 200; // time period for reading/writing serial port, in ms
 
 
 // Motor is Pololu P/N: 3055 with a 248.98:1 reduction gearbox
@@ -569,32 +567,64 @@ void ser_routine() {
         while(Serial.read() > -1);
         break;
       }
-      case 71: {// 'G' - Update PID variables
-        Serial.println("Updating PID variables.");
-        long in_b2, in_b3, in_b4, in_b5, in_long;
+      case 71: {// 'G' - Update K_p variable
+        static char buffer[32];
+        static size_t pos;
+        float pid_p {0};
 
-        in_b2 = Serial.read(); // 
-        in_b3 = Serial.read(); // 
-        in_b4 = Serial.read(); // 
-        in_b5 = Serial.read(); // 
-        Serial.println(in_b2);
-        Serial.println(in_b3);
-        Serial.println(in_b4);
-        Serial.println(in_b5);
-        
-        in_long = (in_b5 << 24) | (in_b4 << 16) | (in_b3 << 8) | in_b2;
-        Serial.println(in_long);
-        float* p_pid = new float;
-        *p_pid = *(&in_long);
-
-        Serial.print("New K_p value:");
-        Serial.println(*p_pid);
-        delete p_pid;
-
-        while(Serial.read() > -1);
+        while (Serial.available()) {
+          char c = Serial.read();
+          if (c == '\n') {  // on end of line, parse the number
+            buffer[pos] = '\0';
+            k_p = atof(buffer);
+            pos = 0;
+          } else if (pos < sizeof buffer - 1) {  // otherwise, buffer it
+            buffer[pos++] = c;
+          }
+        }
+        Serial.print("Kp=");
+        Serial.println(k_p, 4);
         break;
       }
-      
+      case 72: {// 'H' - Update K_i variable
+        static char buffer[32];
+        static size_t pos;
+        float pid_p {0};
+
+        while (Serial.available()) {
+          char c = Serial.read();
+          if (c == '\n') {  // on end of line, parse the number
+            buffer[pos] = '\0';
+            k_i = atof(buffer);
+            pos = 0;
+          } else if (pos < sizeof buffer - 1) {  // otherwise, buffer it
+            buffer[pos++] = c;
+          }
+        }
+        Serial.print("Ki=");
+        Serial.println(k_i, 4);
+        break;
+      }
+      case 73: {// 'I' - Update K_d variable
+        static char buffer[32];
+        static size_t pos;
+        float pid_p {0};
+
+        while (Serial.available()) {
+          char c = Serial.read();
+          if (c == '\n') {  // on end of line, parse the number
+            buffer[pos] = '\0';
+            k_d = atof(buffer);
+            pos = 0;
+          } else if (pos < sizeof buffer - 1) {  // otherwise, buffer it
+            buffer[pos++] = c;
+          }
+        }
+        Serial.print("Kd=");
+        Serial.println(k_d, 4);
+        break;
+      }      
+
       default: {
         Serial.println("Unrecognized command.");
         while(Serial.read() > -1);
