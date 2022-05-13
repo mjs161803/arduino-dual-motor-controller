@@ -1,4 +1,4 @@
-# This test script issues a command ("G") to the Arduino to update the PID variables
+# This test script issues commands "G", "H" and "I" to the Arduino to update the PID variables
 
 import serial
 import time

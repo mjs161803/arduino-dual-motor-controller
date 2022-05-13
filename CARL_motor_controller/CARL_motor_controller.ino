@@ -337,24 +337,24 @@ void ser_routine() {
     in_byte1 = Serial.read();
     switch(in_byte1) {
       case 65: {//  'A' - Set new RPM values 
-        in_byte2 = Serial.read(); // left motor rpm, high byte
-        in_byte3 = Serial.read(); // left motor rpm, low byte
-        in_byte4 = Serial.read(); // right motor rpm, high byte
-        in_byte5 = Serial.read(); // right motor rpm, low byte
+        in_byte2 = Serial.read(); // left motor rpm, low byte of 16bit signed int
+        in_byte3 = Serial.read(); // left motor rpm, high byte of 16bit signed int
+        in_byte4 = Serial.read(); // right motor rpm, low byte of 16bit signed int
+        in_byte5 = Serial.read(); // right motor rpm, high byte of 16bit signed int
 
-        in_byte6 = Serial.read(); // left motor max count, high3 byte
-        in_byte7 = Serial.read(); // left motor max count, high2 byte
-        in_byte8 = Serial.read(); // left motor max count, high1 byte
-        in_byte9 = Serial.read(); // left motor max count, low byte
-        in_byte10 = Serial.read(); // right motor max count, high3 byte
-        in_byte11 = Serial.read(); // right motor max count, high2 byte
-        in_byte12 = Serial.read(); // right motor max count, high1 byte
-        in_byte13 = Serial.read(); // right motor max count, low byte
+        in_byte6 = Serial.read(); // left motor max count, high3 byte of 32bit unsigned int
+        in_byte7 = Serial.read(); // left motor max count, high2 byte of 32bit unsigned int
+        in_byte8 = Serial.read(); // left motor max count, high1 byte of 32bit unsigned int
+        in_byte9 = Serial.read(); // left motor max count, low byte of 32bit unsigned int
+        in_byte10 = Serial.read(); // right motor max count, high3 byte of 32bit unsigned int
+        in_byte11 = Serial.read(); // right motor max count, high2 byte of 32bit unsigned int
+        in_byte12 = Serial.read(); // right motor max count, high1 byte of 32bit unsigned int
+        in_byte13 = Serial.read(); // right motor max count, low byte of 32bit unsigned int
         
         max_enc1_count = ((in_byte6 << 24) | (in_byte7 << 16) | (in_byte8 << 8) | in_byte9);
         max_enc2_count = ((in_byte10 << 24) | (in_byte11 << 16) | (in_byte12 << 8) | in_byte13);
 
-        int motor_rpm = ((in_byte2 << 8) | (in_byte3));
+        int motor_rpm = ((in_byte3 << 8) | (in_byte2));
         
         if (motor_rpm < 0) {
           l_motor_dir = 0;
@@ -364,7 +364,7 @@ void ser_routine() {
         set_l_motor_rpm = (float(abs(motor_rpm)));
         
 
-        motor_rpm = ((in_byte4 << 8) | (in_byte5));
+        motor_rpm = ((in_byte5 << 8) | (in_byte4));
         if (motor_rpm < 0) {
           r_motor_dir = 0;
         } else {
