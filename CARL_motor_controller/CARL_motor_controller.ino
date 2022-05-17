@@ -26,7 +26,7 @@ const unsigned long t_controller = 100 ;  // time period for updating controller
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const unsigned long pid_timeout = (100000);  // microseconds per PID interval
-const unsigned long t_serial = 200; // time period for reading/writing serial port, in ms
+const unsigned long t_serial = 500; // time period for reading/writing serial port, in ms
 
 
 // Motor is Pololu P/N: 3055 with a 248.98:1 reduction gearbox
@@ -60,10 +60,10 @@ volatile float r_motor_error3 {0.0};
 volatile float l_motor_error4 {0.0};
 volatile float r_motor_error4 {0.0};
 
-const byte encoder1_a_pin = 2;
-const byte encoder1_b_pin = 4;
-const byte encoder2_a_pin = 3;
-const byte encoder2_b_pin = 5;
+const byte encoder1_a_pin = 3;
+const byte encoder1_b_pin = 5;
+const byte encoder2_a_pin = 2;
+const byte encoder2_b_pin = 4;
 
 volatile unsigned int pid_counter {0}; // used with Timer0 to synchronize PID controller
 volatile unsigned int ser_counter {0}; // used with Timer1 to synchronize serial read/write
@@ -137,7 +137,9 @@ volatile double coeff2 = (9.94) / (204.6 * 1.986); // coefficient to multiply vo
 void setup() {
   Wire.begin();        // join i2c bus (address optional for master)
   Serial.begin(115200);  // start serial for output
-  
+  Serial.println("Initializing Arduino Motor Controller.");
+  delay(2000);
+ 
   // PCA9685 Initialization sequence
   Wire.beginTransmission(PCA9685_addr); 
   Wire.endTransmission();
@@ -249,7 +251,8 @@ void setup() {
   TCCR0B |= (1<<CS01) | (1<<CS00); // set CS01,00 for prescaler = 64
   TCCR1B |= (1<<CS11) | (1<<CS10); // set CS11,10 for prescaler = 64
   interrupts();
-  
+  Serial.println("Arduino Motor Controller Initialization Complete.");
+
 }
 
 ISR(TIMER0_COMPA_vect) {
@@ -273,6 +276,7 @@ void enc2_ISR() {
 }
 
 void PID_routine() {
+
   if(l_motor_enable) {
     if (enc1_count < max_enc1_count) {
       unsigned long enc1_delta_t = enc1_t1-enc1_t2;
@@ -300,6 +304,8 @@ void PID_routine() {
       l_motor_enable = false;
       l_motor_throttle = 0.0;
     }
+  } else {
+    l_motor_throttle = 0.0;
   }
   if(r_motor_enable) {
     if (enc2_count < max_enc2_count) {
@@ -327,6 +333,8 @@ void PID_routine() {
       r_motor_enable = false;
       r_motor_throttle = 0.0;
     }
+  } else {
+    r_motor_throttle = 0.0;
   }
   command_motors();
   
@@ -864,7 +872,6 @@ void loop() {
   if (ser_counter >= t_serial) {
     ser_counter = 0;
     ser_routine();
-
   }
 
 }
