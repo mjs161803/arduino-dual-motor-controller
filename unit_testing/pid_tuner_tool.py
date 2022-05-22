@@ -13,10 +13,10 @@ from enum import Enum
 kp = 0.003
 ki = 0.03
 kd = 0.000075
-k_increment = 0.0005
+k_increment = 0.003
 wheel_radius = 4.001 # cm
 segment_distance = 101 # cm
-rpm_sp = 14939 # RPM set point
+rpm_sp = 14000 # RPM set point
 serial_path = '/dev/ttyACM0'
 serial_baud = 115200
 serial_timeout = 1.5
@@ -85,13 +85,6 @@ print("time_per_segment: " + str(time_per_segment))
 print("total_ticks: " + str(total_ticks))
 
 while (current_state != program_state.EXITING):
-    arduino.write(move_command)
-    
-    rpm_sp *= -1 # change direction
-    l_rpm_bytes = (np.int16(rpm_sp)).tobytes() 
-    r_rpm_bytes = (np.int16(rpm_sp)).tobytes()
-    move_command = b'\x41' + l_rpm_bytes + r_rpm_bytes + l_ticks_bytes + r_ticks_bytes
-    
     os.system('clear')
     print("Press p to enter K_p updaing mode. aka - " + str(program_state.KP_UPDATE) + " mode")
     print("Press i to enter K_i updaing mode. aka - " + str(program_state.KI_UPDATE) + " mode")
@@ -101,6 +94,14 @@ while (current_state != program_state.EXITING):
     print("Current Kd: " + str(kd) + '\n')
     print("Current Mode: " + str(current_state))
     print("Enter +/- to adjust current parameter.")
+    
+    l_rpm_bytes = (np.int16(rpm_sp)).tobytes() 
+    r_rpm_bytes = (np.int16(rpm_sp)).tobytes()
+    move_command = b'\x41' + l_rpm_bytes + r_rpm_bytes + l_ticks_bytes + r_ticks_bytes
+    arduino.write(move_command)
+    
+    rpm_sp *= -1 # change direction
+    
     time.sleep(time_per_segment + 3) # should result in pausing for one second after each segment run
 
     if select.select([sys.stdin, ], [], [], 0.0)[0]:
@@ -140,7 +141,6 @@ while (current_state != program_state.EXITING):
         else:
             print("Unknown command.")
         
-        time.sleep(1.5)
         
 print("Received quit command. Exiting...")
 

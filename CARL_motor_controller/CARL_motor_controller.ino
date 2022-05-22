@@ -22,12 +22,12 @@
  
 #include <Wire.h>
 
-const unsigned long t_controller = 100 ;  // time period for updating controller, in ms
+const unsigned long t_controller = 20 ;  // time period for updating controller, in ms
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
 const float t_ctrl_sec = (float(t_controller) / 1000.0);
 
-const unsigned long pid_timeout = (100000);  // microseconds per PID interval
+const unsigned long pid_timeout = t_controller * 10000;  // microseconds per PID interval
 const unsigned long t_serial = 500; // time period for reading/writing serial port, in ms
 
 
@@ -48,8 +48,8 @@ const unsigned long rpm_coeff {20000000}; // used to calculate rpm
  *    Kd = (Kp * Pu) / 8
  */
 volatile float k_p = 0.003;
-volatile float k_i = 0.0;
-volatile float k_d = 0.0;
+volatile float k_i = 0.03;
+volatile float k_d = 0.000075;
 
 volatile float l_motor_error0 {0.0};
 volatile float r_motor_error0 {0.0};
