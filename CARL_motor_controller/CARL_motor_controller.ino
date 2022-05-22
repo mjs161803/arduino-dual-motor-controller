@@ -25,6 +25,8 @@
 const unsigned long t_controller = 100 ;  // time period for updating controller, in ms
                                           // 100ms t_controller results in a minimum detectable motor shaft angvel of 50 RPM = ~5.23 radians/sec
                                           // which equates to roughly 0.2 RPM on the wheel (or 0.0033 revolutions / second)
+const float t_ctrl_sec = (float(t_controller) / 1000.0);
+
 const unsigned long pid_timeout = (100000);  // microseconds per PID interval
 const unsigned long t_serial = 500; // time period for reading/writing serial port, in ms
 
@@ -53,12 +55,14 @@ volatile float l_motor_error0 {0.0};
 volatile float r_motor_error0 {0.0};
 volatile float l_motor_error1 {0.0};
 volatile float r_motor_error1 {0.0};
-volatile float l_motor_error2 {0.0};
-volatile float r_motor_error2 {0.0};
-volatile float l_motor_error3 {0.0};
-volatile float r_motor_error3 {0.0};
-volatile float l_motor_error4 {0.0};
-volatile float r_motor_error4 {0.0};
+volatile float l_motor_intgrl_error {0.0};
+volatile float r_motor_intgrl_error {0.0};
+// volatile float l_motor_error2 {0.0};
+// volatile float r_motor_error2 {0.0};
+// volatile float l_motor_error3 {0.0};
+// volatile float r_motor_error3 {0.0};
+// volatile float l_motor_error4 {0.0};
+// volatile float r_motor_error4 {0.0};
 
 const byte encoder1_a_pin = 3;
 const byte encoder1_b_pin = 5;
@@ -77,8 +81,12 @@ volatile unsigned long enc2_count {0};
 
 volatile bool l_motor_enable {false}; 
 volatile bool r_motor_enable {false}; 
-volatile float r_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
-volatile float l_motor_rpm {0.0};      // measured angular velocity in revolutions per minute
+volatile float r_motor_rpm0 {0.0};      // n = 0 measured angular velocity in revolutions per minute
+volatile float l_motor_rpm0 {0.0};      // n = 0 measured angular velocity in revolutions per minute
+volatile float r_motor_rpm1 {0.0};      // n = -1 measured angular velocity in revolutions per minute
+volatile float l_motor_rpm1 {0.0};      // n = -1 measured angular velocity in revolutions per minute
+volatile float r_motor_rpm {0.0};      // filtered, current angular velocity in revolutions per minute
+volatile float l_motor_rpm {0.0};      // filtered, current angular velocity in revolutions per minute
 volatile int r_motor_dir = 0;          // commanded motor direction (1 = forward, 0 = backwards)
 volatile int l_motor_dir = 0;          // commanded motor direction (1 = forward, 0 = backwards)
 volatile float set_l_motor_rpm {0.0};  // commanded angular velocity for left motor, in RPM
@@ -281,19 +289,19 @@ void PID_routine() {
     if (enc1_count < max_enc1_count) {
       unsigned long enc1_delta_t = enc1_t1-enc1_t2;
       if ((micros() - enc1_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
-        l_motor_rpm = 0.0;
+        l_motor_rpm1 = l_motor_rpm0;
+        l_motor_rpm0 = 0.0;
+        l_motor_rpm = (l_motor_rpm0 + l_motor_rpm1) / 2.0;
       }
       else {
-        l_motor_rpm = (rpm_coeff / (float(enc1_delta_t)));     
+        l_motor_rpm1 = l_motor_rpm0;
+        l_motor_rpm0 = (rpm_coeff / (float(enc1_delta_t)));     
+        l_motor_rpm = (l_motor_rpm0 + l_motor_rpm1) / 2.0;
       }
-      l_motor_error4 = l_motor_error3;
-      l_motor_error3 = l_motor_error2;
-      l_motor_error2 = l_motor_error1;
       l_motor_error1 = l_motor_error0;
       l_motor_error0 = set_l_motor_rpm - l_motor_rpm;
-      l_motor_throttle =        (k_p * l_motor_error0) + 
-                                (k_i * (l_motor_error0 + l_motor_error1 + l_motor_error2 + l_motor_error3 + l_motor_error4)) +
-                                (k_d * (l_motor_error0 - l_motor_error1));
+      l_motor_intgrl_error = l_motor_intgrl_error + (t_ctrl_sec * l_motor_error0);
+      l_motor_throttle = (k_p * l_motor_error0) + (k_i * l_motor_intgrl_error) + (k_d * (l_motor_error0 - l_motor_error1));
       if (l_motor_throttle > 100.0) {
         l_motor_throttle = 100.0;
       } else if (l_motor_throttle < 6.0) {
@@ -311,19 +319,19 @@ void PID_routine() {
     if (enc2_count < max_enc2_count) {
       unsigned long enc2_delta_t = enc2_t1-enc2_t2;
       if ((micros() - enc2_t1) > (pid_timeout) ) { //100 ms. Minimum angvel detectable should be 1 tick / 999usec
-        r_motor_rpm = 0.0;
+        r_motor_rpm1 = r_motor_rpm0;
+        r_motor_rpm0 = 0.0;
+        r_motor_rpm = (r_motor_rpm0 + r_motor_rpm1) / 2.0;
       }
       else {
-        r_motor_rpm = (rpm_coeff / (float(enc2_delta_t)));     
+        r_motor_rpm1 = r_motor_rpm0;
+        r_motor_rpm0 = (rpm_coeff / (float(enc2_delta_t)));
+        r_motor_rpm = (r_motor_rpm0 + r_motor_rpm1) / 2.0;     
       }
-      r_motor_error4 = r_motor_error3;
-      r_motor_error3 = r_motor_error2;
-      r_motor_error2 = r_motor_error1;
       r_motor_error1 = r_motor_error0;
       r_motor_error0 = set_r_motor_rpm - r_motor_rpm;
-      r_motor_throttle =        (k_p * r_motor_error0) + 
-                                (k_i * (r_motor_error0 + r_motor_error1 + r_motor_error2 + r_motor_error3 + r_motor_error4)) +
-                                (k_d * (r_motor_error0 - r_motor_error1));
+      r_motor_intgrl_error = r_motor_intgrl_error + (t_ctrl_sec * r_motor_error0);
+      r_motor_throttle = (k_p * r_motor_error0) + (k_i * r_motor_intgrl_error) + (k_d * (r_motor_error0 - r_motor_error1));
       if (r_motor_throttle > 100.0) {
         r_motor_throttle = 100.0;
       } else if (r_motor_throttle < 6.0) {
