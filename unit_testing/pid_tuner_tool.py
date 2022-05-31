@@ -21,7 +21,7 @@ serial_path = '/dev/ttyACM0'
 serial_baud = 115200
 serial_timeout = 1.5
 
-dist_per_tick = (math.pi * (wheel_radius * wheel_radius) ) / (248.98 * 3) # cm
+dist_per_tick = (2 * math.pi * wheel_radius) / (248.98 * 3) # cm
 total_ticks = int(segment_distance / dist_per_tick)
 time_per_tick = 60 / (rpm_sp * 3) # seconds per tick
 time_per_segment = total_ticks * time_per_tick
