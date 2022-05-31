@@ -358,17 +358,17 @@ void ser_routine() {
         in_byte4 = Serial.read(); // right motor rpm, low byte of 16bit signed int
         in_byte5 = Serial.read(); // right motor rpm, high byte of 16bit signed int
 
-        in_byte6 = Serial.read(); // left motor max count, high3 byte of 32bit unsigned int
-        in_byte7 = Serial.read(); // left motor max count, high2 byte of 32bit unsigned int
-        in_byte8 = Serial.read(); // left motor max count, high1 byte of 32bit unsigned int
-        in_byte9 = Serial.read(); // left motor max count, low byte of 32bit unsigned int
-        in_byte10 = Serial.read(); // right motor max count, high3 byte of 32bit unsigned int
-        in_byte11 = Serial.read(); // right motor max count, high2 byte of 32bit unsigned int
-        in_byte12 = Serial.read(); // right motor max count, high1 byte of 32bit unsigned int
-        in_byte13 = Serial.read(); // right motor max count, low byte of 32bit unsigned int
+        in_byte6 = Serial.read(); // left motor max count, low byte of 32bit unsigned int
+        in_byte7 = Serial.read(); // left motor max count, high1 byte of 32bit unsigned int
+        in_byte8 = Serial.read(); // left motor max count, high2 byte of 32bit unsigned int
+        in_byte9 = Serial.read(); // left motor max count, high3 byte of 32bit unsigned int
+        in_byte10 = Serial.read(); // right motor max count, low byte of 32bit unsigned int
+        in_byte11 = Serial.read(); // right motor max count, high1 byte of 32bit unsigned int
+        in_byte12 = Serial.read(); // right motor max count, high2 byte of 32bit unsigned int
+        in_byte13 = Serial.read(); // right motor max count, high3 byte of 32bit unsigned int
         
-        max_enc1_count = ((in_byte6 << 24) | (in_byte7 << 16) | (in_byte8 << 8) | in_byte9);
-        max_enc2_count = ((in_byte10 << 24) | (in_byte11 << 16) | (in_byte12 << 8) | in_byte13);
+        max_enc1_count = ((in_byte9 << 24) | (in_byte8 << 16) | (in_byte7 << 8) | in_byte6);
+        max_enc2_count = ((in_byte13 << 24) | (in_byte12 << 16) | (in_byte11 << 8) | in_byte10);
 
         int motor_rpm = ((in_byte3 << 8) | (in_byte2));
         
