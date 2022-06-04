@@ -2,7 +2,7 @@
 
 An Arduino sketch to control two motors for small robots.
 
-After the Arduino initializes, it enters into a loop checking for serial input from a host computer.  Information on the format of serial messages to issue various commands to the Arduino are summarized below.  
+After the Arduino initializes, it enters into a loop checking for serial input from a host computer.  This serial port interface is summarized below.  
 
 Message formats received by Arduino over Serial, from host computer:
  *    0x41 0xYY 0xYY 0xZZ 0xZZ 0xRR 0xRR 0xRR 0xRR 0xSS 0xSS 0xSS 0xSS : set rpm for left and right motor. Both Y and Z are signed INT16's. int1 is the left motor (-32,768 -> +32,767 RPM) and 2nd signed int is the right motor (-32,768 -> +32,767 RPM). R and S are unsigned long INT's. The Arduino will continue rotating left motor until R full rotations have occured, and then stop the motor, and continue rotating the right motor until S full rotations have occured, and then stop the motor.
